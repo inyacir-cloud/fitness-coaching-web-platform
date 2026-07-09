@@ -30,6 +30,7 @@ export const trainingDays = pgTable("training_days", {
   id: serial("id").primaryKey(),
   clientId: integer("client_id").references(() => clients.id).notNull(),
   dayName: text("day_name").notNull(),
+  displayName: text("display_name"),
   exercises: jsonb("exercises").$type<Exercise[]>().notNull().default([]),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -89,6 +90,8 @@ export const inbodyRecords = pgTable("inbody_records", {
 export type Exercise = {
   id: string;
   name: string;
+  notes?: string;
+  type?: "reps" | "time";
   sets: { reps: string }[];
 };
 

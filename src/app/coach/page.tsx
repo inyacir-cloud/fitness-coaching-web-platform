@@ -37,7 +37,7 @@ function fmtShort(d: Date) {
 }
 
 type Client = { id: number; name: string; username: string; monthlyFee: string; periodicityDays: number; startDate: string; isActive?: boolean };
-type TrainingDay = { id?: number; clientId: number; dayName: string; exercises: Exercise[] };
+type TrainingDay = { id?: number; clientId: number; dayName: string; displayName?: string; exercises: Exercise[] };
 type Diet = { id?: number; clientId: number; meals: Meal[] };
 
 type LogRow = { id: number; clientId: number; trainingDayId: number; logDate: string; dayCompleted: boolean; completedSets: unknown };
@@ -146,23 +146,36 @@ export default function CoachPage() {
 
   const openClient = useCallback(async (client: Client) => {
     setLoading(true);
-    const [td, dietRes] = await Promise.all([
-      fetch(`/api/training-days?clientId=${client.id}`).then(r => r.json()),
-      fetch(`/api/diet?clientId=${client.id}`).then(r => r.json()),
-    ]);
-    setTrainingDays(td);
-    setDiet(dietRes ?? { clientId: client.id, meals: [] });
-    setSelectedClient(client);
-    setSelectedDay("Lunes");
-    setClientTab("training");
-    setWeekStart(getMonday(new Date()));
-    setProgress(null);
-    setLoading(false);
+    try {
+      const [tdRes, dietRes] = await Promise.all([
+        fetch(`/api/training-days?clientId=${client.id}`),
+        fetch(`/api/diet?clientId=${client.id}`),
+      ]);
+      const td = tdRes.ok ? await tdRes.json() : [];
+      const diet = dietRes.ok ? await dietRes.json() : null;
+      setTrainingDays(td);
+      setDiet(diet ?? { clientId: client.id, meals: [] });
+      setSelectedClient(client);
+      setSelectedDay("Lunes");
+      setClientTab("training");
+      setWeekStart(getMonday(new Date()));
+      setProgress(null);
+      setLoading(false);
+    } catch (error) {
+      console.error("Error opening client:", error);
+      setLoading(false);
+    }
   }, []);
 
   const loadProgress = useCallback(async (clientId: number) => {
-    const res = await fetch(`/api/client-progress?clientId=${clientId}`);
-    setProgress(await res.json());
+    try {
+      const res = await fetch(`/api/client-progress?clientId=${clientId}`);
+      const data = res.ok ? await res.json() : null;
+      setProgress(data);
+    } catch (error) {
+      console.error("Error loading progress:", error);
+      setProgress(null);
+    }
   }, []);
 
   useEffect(() => {
@@ -179,12 +192,15 @@ export default function CoachPage() {
       return [...prev, updater(fresh)];
     });
   };
-  const addExercise = () => updateTraining(day => ({ ...day, exercises: [...day.exercises, { id: crypto.randomUUID(), name: "", sets: [{ reps: "12" }] }] }));
+  const addExercise = () => updateTraining(day => ({ ...day, exercises: [...day.exercises, { id: crypto.randomUUID(), name: "", notes: "", type: "reps", sets: [{ reps: "12" }] }] }));
   const updateExerciseName = (exId: string, name: string) => updateTraining(day => ({ ...day, exercises: day.exercises.map(ex => ex.id === exId ? { ...ex, name } : ex) }));
-  const addSet = (exId: string) => updateTraining(day => ({ ...day, exercises: day.exercises.map(ex => ex.id === exId ? { ...ex, sets: [...ex.sets, { reps: "12" }] } : ex) }));
+  const updateExerciseNotes = (exId: string, notes: string) => updateTraining(day => ({ ...day, exercises: day.exercises.map(ex => ex.id === exId ? { ...ex, notes } : ex) }));
+  const updateExerciseType = (exId: string, type: "reps" | "time") => updateTraining(day => ({ ...day, exercises: day.exercises.map(ex => ex.id === exId ? { ...ex, type } : ex) }));
+  const addSet = (exId: string) => updateTraining(day => ({ ...day, exercises: day.exercises.map(ex => ex.id === exId ? { ...ex, sets: [...ex.sets, { reps: ex.sets[ex.sets.length - 1]?.reps || "12" }] } : ex) }));
   const removeSet = (exId: string, setIdx: number) => updateTraining(day => ({ ...day, exercises: day.exercises.map(ex => ex.id === exId ? { ...ex, sets: ex.sets.filter((_, i) => i !== setIdx) } : ex) }));
   const updateSetReps = (exId: string, setIdx: number, reps: string) => updateTraining(day => ({ ...day, exercises: day.exercises.map(ex => ex.id === exId ? { ...ex, sets: ex.sets.map((s, i) => i === setIdx ? { reps } : s) } : ex) }));
   const removeExercise = (exId: string) => updateTraining(day => ({ ...day, exercises: day.exercises.filter(ex => ex.id !== exId) }));
+  const updateTrainingDayDisplayName = (displayName: string) => setTrainingDays(prev => prev.map(d => d.dayName === selectedDay ? { ...d, displayName } : d));
 
   // --- Diet helpers ---
   const addMeal = () => { if (!diet) return; setDiet({ ...diet, meals: [...diet.meals, { id: crypto.randomUUID(), time: "08:00", description: "" }] }); };
@@ -198,9 +214,9 @@ export default function CoachPage() {
       const ops: Promise<unknown>[] = [];
       if (training) {
         if (training.id) {
-          ops.push(fetch(`/api/training-days/${training.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ dayName, exercises: training.exercises }) }));
+          ops.push(fetch(`/api/training-days/${training.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ dayName, displayName: training.displayName, exercises: training.exercises }) }));
         } else {
-          ops.push(fetch("/api/training-days", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ clientId: selectedClient!.id, dayName, exercises: training.exercises }) }));
+          ops.push(fetch("/api/training-days", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ clientId: selectedClient!.id, dayName, displayName: training.displayName, exercises: training.exercises }) }));
         }
       }
       return ops;
@@ -504,20 +520,31 @@ export default function CoachPage() {
                   <>
                     <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
                       {DAYS.map(day => {
-                        const hasTr = trainingDays.some(d => d.dayName === day && d.exercises.length > 0);
+                        const trainingDay = trainingDays.find(d => d.dayName === day);
+                        const hasTr = trainingDay && trainingDay.exercises.length > 0;
                         return (
-                          <button key={day} onClick={() => setSelectedDay(day)} className={`shrink-0 px-4 py-2 rounded-xl text-sm font-medium transition-all border ${selectedDay === day ? "bg-slate-900 text-white border-slate-900" : hasTr ? "bg-white border-slate-900/30 text-slate-700" : "bg-white border-slate-200 text-slate-500"}`}>
-                            {day.slice(0, 3)}
-                            {hasTr && selectedDay !== day && <span className="ml-1 w-1.5 h-1.5 bg-slate-900 rounded-full inline-block align-middle" />}
+                          <button key={day} onClick={() => setSelectedDay(day)} className={`shrink-0 px-4 py-2 rounded-xl text-sm font-medium transition-all border flex flex-col items-center ${selectedDay === day ? "bg-slate-900 text-white border-slate-900" : hasTr ? "bg-white border-slate-900/30 text-slate-700" : "bg-white border-slate-200 text-slate-500"}`}>
+                            <span>{day.slice(0, 3)}</span>
+                            {trainingDay?.displayName && <span className={`text-xs font-normal ${selectedDay === day ? "text-slate-100" : "text-slate-400"}`}>{trainingDay.displayName.slice(0, 12)}</span>}
+                            {hasTr && selectedDay !== day && <span className="ml-1 w-1.5 h-1.5 bg-slate-900 rounded-full inline-block align-middle mt-1" />}
                           </button>
                         );
                       })}
                     </div>
 
                     <div className="space-y-4">
-                      <div className="flex justify-between items-center mb-2">
-                        <h3 className="font-bold text-slate-800 text-lg">Ejercicios — {selectedDay}</h3>
-                        <button onClick={addExercise} className="flex items-center gap-1.5 bg-slate-900 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-slate-800 transition-colors">
+                      <div className="sticky top-24 z-10 bg-slate-50 -mx-6 md:-mx-6 px-6 md:px-6 py-4 mb-4 rounded-xl flex justify-between items-center gap-3">
+                        <div className="flex-1">
+                          <p className="text-xs text-slate-500 font-semibold">Ejercicios — {selectedDay}</p>
+                          <input 
+                            type="text" 
+                            placeholder="Ej: Tren Superior, Pierna..." 
+                            value={currentTraining?.displayName || ""} 
+                            onChange={e => updateTrainingDayDisplayName(e.target.value)} 
+                            className="w-full text-slate-800 font-bold text-lg outline-none bg-transparent placeholder:text-slate-300 focus:text-slate-900"
+                          />
+                        </div>
+                        <button onClick={addExercise} className="flex items-center gap-1.5 bg-slate-900 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-slate-800 transition-colors shrink-0">
                           <Plus size={16} /> Ejercicio
                         </button>
                       </div>
@@ -533,14 +560,21 @@ export default function CoachPage() {
                         <div key={ex.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
                           <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100 bg-slate-50">
                             <span className="w-7 h-7 bg-slate-900 text-white rounded-lg flex items-center justify-center text-xs font-bold">{exIdx + 1}</span>
-                            <input type="text" placeholder="Nombre del ejercicio" value={ex.name} onChange={e => updateExerciseName(ex.id, e.target.value)} className="flex-1 bg-transparent font-semibold text-slate-900 outline-none placeholder:text-slate-400" />
+                            <div className="flex-1">
+                              <input type="text" placeholder="Nombre del ejercicio" value={ex.name} onChange={e => updateExerciseName(ex.id, e.target.value)} className="w-full bg-transparent font-semibold text-slate-900 outline-none placeholder:text-slate-400" />
+                              <input type="text" placeholder="Nota opcional..." value={ex.notes || ""} onChange={e => updateExerciseNotes(ex.id, e.target.value)} className="w-full bg-transparent text-xs text-slate-500 outline-none placeholder:text-slate-300 mt-1" />
+                            </div>
+                            <select value={ex.type || "reps"} onChange={e => updateExerciseType(ex.id, e.target.value as "reps" | "time")} className="text-xs bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-slate-600 outline-none hover:border-slate-300">
+                              <option value="reps">Repeticiones</option>
+                              <option value="time">Tiempo (min)</option>
+                            </select>
                             <button onClick={() => removeExercise(ex.id)} className="text-slate-300 hover:text-red-500 transition-colors"><Trash2 size={18} /></button>
                           </div>
                           <div className="p-5 space-y-2">
                             {ex.sets.map((s, sIdx) => (
                               <div key={sIdx} className="grid grid-cols-12 gap-2 items-center">
                                 <span className="col-span-2 text-sm font-mono text-slate-500 text-center bg-slate-50 rounded-lg py-2">#{sIdx + 1}</span>
-                                <input type="text" placeholder="ej. 12" value={s.reps} onChange={e => updateSetReps(ex.id, sIdx, e.target.value)} className="col-span-7 border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-300" />
+                                <input type="text" placeholder={ex.type === "time" ? "ej. 30" : "ej. 12"} value={s.reps} onChange={e => updateSetReps(ex.id, sIdx, e.target.value)} className="col-span-7 border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-300" />
                                 <button onClick={() => removeSet(ex.id, sIdx)} className="col-span-3 text-slate-300 hover:text-red-500 transition-colors flex justify-center"><Trash2 size={15} /></button>
                               </div>
                             ))}
@@ -557,7 +591,7 @@ export default function CoachPage() {
                 {/* DIET */}
                 {clientTab === "diet" && (
                   <div className="space-y-4">
-                    <div className="flex justify-between items-center mb-2">
+                    <div className="sticky top-24 z-10 bg-white -mx-6 md:-mx-6 px-6 md:px-6 py-4 mb-4 rounded-xl flex justify-between items-center border-b border-slate-200">
                       <div>
                         <h3 className="font-bold text-slate-800 text-lg">Plan de Alimentación</h3>
                         <p className="text-xs text-slate-500">Dieta general · Aplica todos los días</p>

@@ -5,9 +5,9 @@ import { NextResponse } from "next/server";
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { dayName, exercises } = await req.json();
+  const { dayName, displayName, exercises } = await req.json();
   const [updated] = await db.update(trainingDays)
-    .set({ dayName, exercises })
+    .set({ dayName, displayName, exercises })
     .where(eq(trainingDays.id, Number(id)))
     .returning();
 

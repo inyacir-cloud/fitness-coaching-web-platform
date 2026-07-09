@@ -992,9 +992,9 @@ function InBodyCardClient({ record, onDelete }: { record: InBodyRow; onDelete: (
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={e => { e.stopPropagation(); onDelete(); }} className="text-slate-300 hover:text-red-500 p-1">
+          <div onClick={e => { e.stopPropagation(); onDelete(); }} className="text-slate-300 hover:text-red-500 p-1 cursor-pointer transition-colors">
             <Trash2 size={14} />
-          </button>
+          </div>
           <ChevronDown size={16} className={`text-slate-400 transition-transform ${open ? "rotate-180" : ""}`} />
         </div>
       </button>
