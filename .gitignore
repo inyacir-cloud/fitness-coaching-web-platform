@@ -1,0 +1,29 @@
+# Dependencias
+node_modules/
+
+# Next.js
+.next/
+out/
+
+# Variables de entorno (¡NUNCA subir al repositorio!)
+.env
+.env.local
+.env.*.local
+.env.production
+
+# Drizzle
+drizzle.config.json.bak
+
+# Build
+dist/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/settings.json
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
