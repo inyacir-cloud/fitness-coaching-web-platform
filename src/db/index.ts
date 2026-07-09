@@ -15,6 +15,9 @@ export const pool =
   globalForDb.__arenaNextJsPostgresqlPool ??
   new Pool({
     connectionString: databaseUrl,
+    ssl: databaseUrl.includes("supabase.com") ? { rejectUnauthorized: false } : undefined,
+    // PgBouncer (transaction mode) no soporta prepared statements
+    max: 10,
   });
 
 if (process.env.NODE_ENV !== "production") {
