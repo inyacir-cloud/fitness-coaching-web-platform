@@ -40,7 +40,7 @@ export default function Home() {
         </div>
 
         <footer className="mt-12 text-center text-xs text-slate-400 font-semibold uppercase tracking-widest">
-          &copy; 2024 EMICOACH SYSTEM
+          &copy; 2026 EMICOACH SYSTEM
         </footer>
       </div>
     </main>

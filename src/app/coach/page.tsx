@@ -279,9 +279,6 @@ export default function CoachPage() {
           <div className="text-center mb-8">
             <h1 className="text-3xl font-black italic text-slate-900 tracking-tighter">EMICOACH</h1>
             <p className="text-slate-500 text-sm mt-2">Acceso exclusivo Coach</p>
-            <div className="mt-3 text-[11px] text-slate-400 bg-slate-50 border border-slate-100 rounded-lg p-2">
-              Demo: usuario <span className="font-mono font-bold">coach</span> / contraseña <span className="font-mono font-bold">coach1234</span> ó máster <span className="font-mono font-bold">EmiCoach2025</span>
-            </div>
           </div>
           <div className="space-y-3">
             <div>
