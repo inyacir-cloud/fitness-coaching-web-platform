@@ -1,12 +1,18 @@
+/// <reference types="node" />
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { signCoachToken } from "@/lib/server-auth";
 
+export const runtime = "nodejs";
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const ENV: Record<string, string | undefined> = (globalThis as any).process?.env ?? {};
+
 export async function POST(req: Request) {
   const { username, password } = await req.json();
 
-  const validUser = process.env.COACH_USERNAME || "coach";
-  const validPass = process.env.COACH_PASSWORD;
+  const validUser = ENV.COACH_USERNAME || "coach";
+  const validPass = ENV.COACH_PASSWORD;
 
   if (!validPass) {
     console.error("COACH_PASSWORD env var is not set");
@@ -21,15 +27,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Usuario o contraseña de coach incorrectos" }, { status: 401 });
   }
 
-  const token = signCoachToken(validUser);
+  const token = await signCoachToken(validUser);
 
   const cookieStore = await cookies();
   cookieStore.set("emicoach-coach-token", token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: ENV.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: 24 * 60 * 60, // 24 horas
+    maxAge: 24 * 60 * 60,
   });
 
   return NextResponse.json({ ok: true, username: validUser, role: "coach" });

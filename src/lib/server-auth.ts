@@ -1,44 +1,51 @@
-import { createHmac, timingSafeEqual } from "crypto";
-
-const SECRET = process.env.COACH_TOKEN_SECRET;
+/// <reference types="node" />
+// Web Crypto API — compatible con Edge Runtime y Node.js 18+
+const TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 
 function getSecret(): string {
-  if (!SECRET) {
+  const secret = process.env.COACH_TOKEN_SECRET ?? "";
+  if (!secret) {
     if (process.env.NODE_ENV === "production") {
       throw new Error("COACH_TOKEN_SECRET is required in production");
     }
     return "dev-insecure-secret-change-me";
   }
-  return SECRET;
+  return secret;
 }
 
-const TOKEN_TTL_MS = 24 * 60 * 60 * 1000; // 24 horas
-
-export function signCoachToken(username: string): string {
-  const timestamp = Date.now().toString();
-  const payload = `${username}:${timestamp}`;
-  const sig = createHmac("sha256", getSecret()).update(payload).digest("hex");
-  return Buffer.from(`${payload}:${sig}`).toString("base64url");
+async function getHmacKey(): Promise<CryptoKey> {
+  return crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(getSecret()),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign", "verify"]
+  );
 }
 
-export function verifyCoachToken(token: string): { username: string } | null {
+export async function signCoachToken(username: string): Promise<string> {
+  const payload = `${username}:${Date.now()}`;
+  const key = await getHmacKey();
+  const sigBuf = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(payload));
+  const sig = btoa(String.fromCharCode(...new Uint8Array(sigBuf)));
+  const full = `${payload}:${sig}`;
+  return btoa(full).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
+}
+
+export async function verifyCoachToken(token: string): Promise<{ username: string } | null> {
   try {
-    const decoded = Buffer.from(token, "base64url").toString();
+    const padded = token.replace(/-/g, "+").replace(/_/g, "/");
+    const decoded = atob(padded);
     const lastColon = decoded.lastIndexOf(":");
     if (lastColon === -1) return null;
 
     const payload = decoded.slice(0, lastColon);
     const sig = decoded.slice(lastColon + 1);
 
-    const expected = createHmac("sha256", getSecret()).update(payload).digest("hex");
-
-    // Comparación segura contra timing attacks
-    if (
-      sig.length !== expected.length ||
-      !timingSafeEqual(Buffer.from(sig, "hex"), Buffer.from(expected, "hex"))
-    ) {
-      return null;
-    }
+    const key = await getHmacKey();
+    const sigBuf = Uint8Array.from(atob(sig), (c) => c.charCodeAt(0));
+    const valid = await crypto.subtle.verify("HMAC", key, sigBuf, new TextEncoder().encode(payload));
+    if (!valid) return null;
 
     const parts = payload.split(":");
     if (parts.length < 2) return null;
@@ -46,8 +53,7 @@ export function verifyCoachToken(token: string): { username: string } | null {
     const ts = Number(parts[parts.length - 1]);
     if (isNaN(ts) || Date.now() - ts > TOKEN_TTL_MS) return null;
 
-    const username = parts.slice(0, -1).join(":");
-    return { username };
+    return { username: parts.slice(0, -1).join(":") };
   } catch {
     return null;
   }
