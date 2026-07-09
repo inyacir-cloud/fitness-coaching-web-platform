@@ -3,7 +3,7 @@ import { verifyCoachToken } from "@/lib/server-auth";
 
 const COACH_ONLY: string[] = ["/api/clients", "/api/payments"];
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   const isCoachRoute = COACH_ONLY.some((prefix) => pathname.startsWith(prefix));
