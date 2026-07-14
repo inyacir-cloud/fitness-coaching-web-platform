@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Plus, Trash2, Save, ArrowLeft, User, ChevronRight, Loader2,
   Check, ChevronLeft, ChevronDown, TrendingDown, Activity,
@@ -126,6 +126,23 @@ function getSessionLabel(size: ExerciseSessionSize) {
   return "Ejercicio";
 }
 
+function buildTrainingSignature(days: TrainingDay[]) {
+  return JSON.stringify(
+    [...days]
+      .map((day) => ({
+        dayName: day.dayName,
+        displayName: day.displayName ?? "",
+        exercises: day.exercises,
+      }))
+      .sort((a, b) => a.dayName.localeCompare(b.dayName))
+  );
+}
+
+function buildDietSignature(currentDiet: Diet | null) {
+  if (!currentDiet) return "";
+  return JSON.stringify(currentDiet.meals ?? []);
+}
+
 export default function CoachPage() {
   // --- Coach Auth ---
   const [coachAuth, setCoachAuth] = useState<"checking" | "login" | "ok">("checking");
@@ -152,11 +169,12 @@ export default function CoachPage() {
   const [showAddInBody, setShowAddInBody] = useState(false);
   const [payingClient, setPayingClient] = useState<PaymentStatusRow | null>(null);
   const [showExerciseMenu, setShowExerciseMenu] = useState(false);
-  const [superserieCount, setSuperserieCount] = useState("4");
+  const [superserieCount, setSuperserieCount] = useState("2");
   const [templates, setTemplates] = useState<WorkoutTemplate[]>([]);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [showCreateTemplateModal, setShowCreateTemplateModal] = useState(false);
   const [previewTemplate, setPreviewTemplate] = useState<WorkoutTemplate | null>(null);
+  const [savedSnapshot, setSavedSnapshot] = useState<{ training: string; diet: string }>({ training: "", diet: "" });
 
   const resetCoachSession = useCallback(() => {
     localStorage.removeItem("emicoach-coach-session");
@@ -166,6 +184,7 @@ export default function CoachPage() {
     setClients([]);
     setPaymentStatuses([]);
     setSelectedClient(null);
+    setSavedSnapshot({ training: "", diet: "" });
     setCoachError("Tu sesión expiró. Inicia sesión de nuevo.");
   }, []);
 
@@ -263,7 +282,12 @@ export default function CoachPage() {
       const td = tdRes.ok ? await tdRes.json() : [];
       const diet = dietRes.ok ? await dietRes.json() : null;
       setTrainingDays(td);
-      setDiet(diet ?? { clientId: client.id, meals: [] });
+      const nextDiet = diet ?? { clientId: client.id, meals: [] };
+      setDiet(nextDiet);
+      setSavedSnapshot({
+        training: buildTrainingSignature(td),
+        diet: buildDietSignature(nextDiet),
+      });
       setSelectedClient(client);
       setSelectedDay("Lunes");
       setClientTab("training");
@@ -322,9 +346,9 @@ export default function CoachPage() {
   };
   const addSuperserieGroup = () => {
     const parsed = Number.parseInt(superserieCount, 10);
-    const size = Number.isFinite(parsed) ? Math.max(4, parsed) : 4;
+    const size = Number.isFinite(parsed) ? Math.max(2, parsed) : 2;
     addExerciseGroup(size);
-    setSuperserieCount("4");
+    setSuperserieCount("2");
   };
   const updateExerciseName = (exId: string, name: string) => updateTraining(day => ({ ...day, exercises: day.exercises.map(ex => ex.id === exId ? { ...ex, name } : ex) }));
   const updateExerciseNotes = (exId: string, notes: string) => updateTraining(day => ({ ...day, exercises: day.exercises.map(ex => ex.id === exId ? { ...ex, notes } : ex) }));
@@ -370,8 +394,13 @@ export default function CoachPage() {
       fetch(`/api/training-days?clientId=${selectedClient!.id}`).then(r => r.json()),
       fetch(`/api/diet?clientId=${selectedClient!.id}`).then(r => r.json()),
     ]);
+    const nextDiet = dietRes ?? { clientId: selectedClient!.id, meals: [] };
     setTrainingDays(td);
-    setDiet(dietRes ?? { clientId: selectedClient!.id, meals: [] });
+    setDiet(nextDiet);
+    setSavedSnapshot({
+      training: buildTrainingSignature(td),
+      diet: buildDietSignature(nextDiet),
+    });
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
@@ -409,6 +438,11 @@ export default function CoachPage() {
   const activeClients = paymentStatuses.filter(c => c.status !== "vencido").length;
   const pendingClients = paymentStatuses.filter(c => c.status === "vencido").length;
   const upcomingClients = paymentStatuses.filter(c => c.status === "por_vencer");
+  const currentTrainingSignature = useMemo(() => buildTrainingSignature(trainingDays), [trainingDays]);
+  const currentDietSignature = useMemo(() => buildDietSignature(diet), [diet]);
+  const hasUnsavedPlanChanges = !!selectedClient
+    && (currentTrainingSignature !== savedSnapshot.training || currentDietSignature !== savedSnapshot.diet);
+  const canSavePlan = selectedClient && mainView === "clientes" && clientTab !== "progress" && clientTab !== "info";
 
   // ===================== RENDER =====================
 
@@ -467,7 +501,7 @@ export default function CoachPage() {
           </div>
           <div className="flex items-center gap-2">
             {selectedClient && mainView === "clientes" && (
-              <button onClick={save} disabled={saving || saved || clientTab === "progress" || clientTab === "info"} className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold uppercase tracking-[0.14em] transition-all ${clientTab === "progress" || clientTab === "info" ? "hidden" : ""} ${saved ? "bg-green-600 text-white" : "neon-button"}`}>
+              <button onClick={save} disabled={saving || !hasUnsavedPlanChanges || clientTab === "progress" || clientTab === "info"} className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold uppercase tracking-[0.14em] transition-all ${clientTab === "progress" || clientTab === "info" ? "hidden" : ""} ${saved ? "bg-green-600 text-white" : "neon-button"}`}>
                 {saving ? <Loader2 size={16} className="animate-spin" /> : saved ? <Check size={16} /> : <Save size={16} />}
                 {saving ? "Guardando..." : saved ? "Guardado" : "Guardar"}
               </button>
@@ -900,7 +934,7 @@ export default function CoachPage() {
                           <div className="flex min-w-[184px] items-center gap-2 rounded-xl border border-white/10 bg-[#081120]/95 p-2">
                             <input
                               type="number"
-                              min={4}
+                              min={2}
                               step={1}
                               value={superserieCount}
                               onChange={(e) => setSuperserieCount(e.target.value)}
@@ -908,8 +942,6 @@ export default function CoachPage() {
                             />
                             <button onClick={addSuperserieGroup} className="neon-button-secondary flex-1 justify-center px-3 py-2 text-xs font-bold uppercase tracking-[0.14em]">Superserie</button>
                           </div>
-                          <button onClick={() => addExerciseGroup(3)} className="neon-button-secondary min-w-[184px] justify-center px-4 py-2 text-xs font-bold uppercase tracking-[0.14em]">Triserie</button>
-                          <button onClick={() => addExerciseGroup(2)} className="neon-button-secondary min-w-[184px] justify-center px-4 py-2 text-xs font-bold uppercase tracking-[0.14em]">Biserie</button>
                           <button onClick={() => addExerciseGroup(1)} className="neon-button-secondary min-w-[184px] justify-center px-4 py-2 text-xs font-bold uppercase tracking-[0.14em]">1 ejercicio</button>
                         </div>
                       )}
@@ -1103,6 +1135,19 @@ export default function CoachPage() {
             await deleteTemplate(previewTemplate.id);
           }}
         />
+      )}
+
+      {canSavePlan && hasUnsavedPlanChanges && (
+        <div className="fixed bottom-6 left-1/2 z-40 -translate-x-1/2">
+          <button
+            onClick={save}
+            disabled={saving}
+            className="neon-button flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-bold uppercase tracking-[0.14em] shadow-[0_18px_40px_rgba(0,0,0,0.35)] disabled:opacity-60"
+          >
+            {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+            {saving ? "Guardando..." : "Guardar cambios"}
+          </button>
+        </div>
       )}
     </main>
   );

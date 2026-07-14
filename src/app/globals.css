@@ -105,11 +105,21 @@ select {
 	html,
 	body {
 		background-attachment: scroll;
+		background-image: none;
+		background-color: #050816;
+		-webkit-overflow-scrolling: touch;
 	}
 
 	.neon-shell::before,
 	.neon-shell::after {
 		display: none;
+	}
+
+	*,
+	*::before,
+	*::after {
+		backdrop-filter: none !important;
+		-webkit-backdrop-filter: none !important;
 	}
 
 	.neon-panel,
@@ -122,6 +132,15 @@ select {
 	.neon-link-card,
 	.neon-button {
 		box-shadow: none;
+	}
+
+	[class*="shadow-"] {
+		box-shadow: none !important;
+	}
+
+	[class*="backdrop-blur"] {
+		backdrop-filter: none !important;
+		-webkit-backdrop-filter: none !important;
 	}
 }
 
