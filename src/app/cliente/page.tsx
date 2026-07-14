@@ -171,8 +171,12 @@ export default function ClientePage() {
   const [prevWeights, setPrevWeights] = useState<Record<string, PreviousWeight>>({}); // key: `${exerciseId}-${idx}` -> weight + unit
   const [historyLoading, setHistoryLoading] = useState(false);
   const [livePlanNotice, setLivePlanNotice] = useState<string | null>(null);
+  const [dayCompletionNotice, setDayCompletionNotice] = useState<string | null>(null);
+  const [showCongratsGif, setShowCongratsGif] = useState(false);
   const planSignatureRef = useRef<{ training: string; diet: string }>({ training: "", diet: "" });
   const liveNoticeTimeoutRef = useRef<number | null>(null);
+  const dayCompletionTimeoutRef = useRef<number | null>(null);
+  const congratsGifTimeoutRef = useRef<number | null>(null);
 
   const monday = getMonday(new Date());
   const sunday = getSunday(monday);
@@ -194,6 +198,12 @@ export default function ClientePage() {
     return () => {
       if (liveNoticeTimeoutRef.current !== null) {
         window.clearTimeout(liveNoticeTimeoutRef.current);
+      }
+      if (dayCompletionTimeoutRef.current !== null) {
+        window.clearTimeout(dayCompletionTimeoutRef.current);
+      }
+      if (congratsGifTimeoutRef.current !== null) {
+        window.clearTimeout(congratsGifTimeoutRef.current);
       }
     };
   }, []);
@@ -541,6 +551,25 @@ export default function ClientePage() {
       return [...others, saved];
     });
     setDayCompleted(completed);
+    if (completed) {
+      setShowCongratsGif(true);
+      setViewingDayExercises(false);
+      setDayCompletionNotice(`Excelente, hoy completaste ${selectedDayName}.`);
+      if (dayCompletionTimeoutRef.current !== null) {
+        window.clearTimeout(dayCompletionTimeoutRef.current);
+      }
+      dayCompletionTimeoutRef.current = window.setTimeout(() => {
+        setDayCompletionNotice(null);
+        dayCompletionTimeoutRef.current = null;
+      }, 7000);
+      if (congratsGifTimeoutRef.current !== null) {
+        window.clearTimeout(congratsGifTimeoutRef.current);
+      }
+      congratsGifTimeoutRef.current = window.setTimeout(() => {
+        setShowCongratsGif(false);
+        congratsGifTimeoutRef.current = null;
+      }, 2400);
+    }
     setSaving(false);
   };
 
@@ -723,6 +752,19 @@ export default function ClientePage() {
         </div>
       )}
 
+      {showCongratsGif && (
+        <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-[#020617]/50 px-5">
+          <div className="rounded-2xl border border-lime-300/30 bg-[#07101f]/92 p-4 shadow-[0_24px_70px_rgba(0,0,0,0.45)] backdrop-blur">
+            <img
+              src="https://media.giphy.com/media/111ebonMs90YLu/giphy.gif"
+              alt="Felicitaciones"
+              className="h-36 w-36 rounded-xl border border-lime-300/20 object-cover sm:h-44 sm:w-44"
+            />
+            <p className="mt-3 text-center text-sm font-bold uppercase tracking-[0.14em] text-lime-100">Dia completado</p>
+          </div>
+        </div>
+      )}
+
       {/* Top bar */}
       <div className="neon-panel-soft sticky top-0 z-20 border-b border-white/10">
         <div className="mx-auto flex max-w-3xl items-start gap-3 px-4 py-3 sm:items-center sm:py-3.5">
@@ -753,6 +795,12 @@ export default function ClientePage() {
         {/* ==================== TRAINING TAB ==================== */}
         {tab === "training" && !viewingDayExercises && (
           <>
+            {dayCompletionNotice && (
+              <div className="mb-4 rounded-2xl border border-lime-300/30 bg-lime-300/12 px-4 py-3 shadow-[0_12px_35px_rgba(0,0,0,0.2)]">
+                <p className="text-sm font-semibold text-lime-100">{dayCompletionNotice}</p>
+              </div>
+            )}
+
             {/* Day selector */}
             <div className="mb-5">
               <h3 className="mb-3 text-base font-extrabold uppercase text-white sm:text-lg">Elige un día</h3>
