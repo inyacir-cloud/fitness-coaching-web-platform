@@ -465,7 +465,18 @@ export default function ClientePage() {
 
   const updateWeight = (exerciseId: string, setIndex: number, weight: string) => {
     if (dayCompleted) return;
-    setCompletedSets(prev => prev.map(s => s.exerciseId === exerciseId && s.setIndex === setIndex ? { ...s, weight, weightUnit: normalizeWeightUnit(s.weightUnit) } : s));
+    setCompletedSets((prev) =>
+      prev.map((set) => {
+        if (set.exerciseId !== exerciseId) return set;
+        if (setIndex === 0) {
+          return { ...set, weight, weightUnit: normalizeWeightUnit(set.weightUnit) };
+        }
+        if (set.setIndex === setIndex) {
+          return { ...set, weight, weightUnit: normalizeWeightUnit(set.weightUnit) };
+        }
+        return set;
+      })
+    );
   };
 
   const getExerciseWeightUnit = (exerciseId: string) => {
@@ -916,26 +927,30 @@ export default function ClientePage() {
                                 </span>
                                 <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
                                   <span className="truncate font-bold text-white">{ex.name}</span>
-                                  <div className="flex rounded-full border border-white/10 bg-white/4 p-1">
-                                    {(["kg", "lb"] as WeightUnit[]).map((unit) => (
-                                      <button
-                                        key={unit}
-                                        onClick={() => updateExerciseWeightUnit(ex.id, unit)}
-                                        disabled={dayCompleted}
-                                        className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] transition-all ${getExerciseWeightUnit(ex.id) === unit ? comboTheme.unitButton : "text-slate-400 hover:text-slate-200"}`}
-                                      >
-                                        {unit === "kg" ? "KG" : "LB"}
-                                      </button>
-                                    ))}
-                                  </div>
+                                  {ex.type !== "time" && (
+                                    <div className="flex rounded-full border border-white/10 bg-white/4 p-1">
+                                      {(["kg", "lb"] as WeightUnit[]).map((unit) => (
+                                        <button
+                                          key={unit}
+                                          onClick={() => updateExerciseWeightUnit(ex.id, unit)}
+                                          disabled={dayCompleted}
+                                          className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] transition-all ${getExerciseWeightUnit(ex.id) === unit ? comboTheme.unitButton : "text-slate-400 hover:text-slate-200"}`}
+                                        >
+                                          {unit === "kg" ? "KG" : "LB"}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  )}
                                 </div>
                               </div>
-                              <RestTimer exerciseId={ex.id} exerciseName={ex.name || `${getSessionLabel(group.size)} ${exIdx + 1}`} triggerTimestamp={timerTriggers[ex.id]} disabled={dayCompleted} />
+                              {ex.type !== "time" && (
+                                <RestTimer exerciseId={ex.id} exerciseName={ex.name || `${getSessionLabel(group.size)} ${exIdx + 1}`} triggerTimestamp={timerTriggers[ex.id]} disabled={dayCompleted} />
+                              )}
                               <div className="space-y-3 p-4 sm:p-5">
                                 <div className="grid grid-cols-12 gap-2 px-1 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500 sm:text-xs sm:tracking-wider">
                                   <span className="col-span-1">S.</span>
                                   <span className="col-span-4">Reps</span>
-                                  <span className="col-span-5">Mi peso</span>
+                                  <span className="col-span-5">{ex.type === "time" ? "Tiempo" : "Mi peso"}</span>
                                   <span className="col-span-2 text-center">✓</span>
                                 </div>
                                 {ex.sets.map((s, sIdx) => {
@@ -943,18 +958,25 @@ export default function ClientePage() {
                                   const prevKey = `${ex.id}-${sIdx}`;
                                   const prevWeight = prevWeights[prevKey];
                                   const showPrev = prevWeight?.weight && (!cs?.weight || cs.weight === prevWeight.weight);
+                                  const isTimeExercise = ex.type === "time";
                                   return (
                                     <div key={sIdx} className={`grid grid-cols-12 items-start gap-2 rounded-xl p-2 transition-colors ${cs?.done ? "bg-lime-300/10" : "bg-white/3"}`}>
                                       <span className="col-span-1 pt-2 text-sm font-mono text-slate-500">#{sIdx + 1}</span>
                                       <span className="col-span-4 pt-2 text-xs font-medium text-slate-200 sm:text-sm">{s.reps}</span>
                                       <div className="col-span-5 space-y-1">
-                                        <div className="flex items-center gap-2">
-                                          <input type="text" placeholder={prevWeight?.weight ? `Últ: ${formatWeightWithUnit(prevWeight.weight, prevWeight.unit)}` : getExerciseWeightUnit(ex.id)} value={cs?.weight ?? ""} onChange={e => updateWeight(ex.id, sIdx, e.target.value)} disabled={dayCompleted} className="w-full rounded-xl border border-white/10 bg-[#091120] px-3 py-2 text-sm text-white outline-none focus:border-cyan-400/35 focus:ring-2 focus:ring-cyan-400/12 disabled:bg-white/5 disabled:text-slate-500" />
-                                          <span className="rounded-lg border border-white/10 bg-[#091120] px-2.5 py-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-300">
-                                            {normalizeWeightUnit(cs?.weightUnit ?? getExerciseWeightUnit(ex.id))}
-                                          </span>
-                                        </div>
-                                        {showPrev && (
+                                        {isTimeExercise ? (
+                                          <div className="rounded-xl border border-dashed border-white/12 bg-[#091120]/70 px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                                            Minutos
+                                          </div>
+                                        ) : (
+                                          <div className="flex items-center gap-2">
+                                            <input type="text" placeholder={prevWeight?.weight ? `Últ: ${formatWeightWithUnit(prevWeight.weight, prevWeight.unit)}` : getExerciseWeightUnit(ex.id)} value={cs?.weight ?? ""} onChange={e => updateWeight(ex.id, sIdx, e.target.value)} disabled={dayCompleted} className="w-full rounded-xl border border-white/10 bg-[#091120] px-3 py-2 text-sm text-white outline-none focus:border-cyan-400/35 focus:ring-2 focus:ring-cyan-400/12 disabled:bg-white/5 disabled:text-slate-500" />
+                                            <span className="rounded-lg border border-white/10 bg-[#091120] px-2.5 py-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-300">
+                                              {normalizeWeightUnit(cs?.weightUnit ?? getExerciseWeightUnit(ex.id))}
+                                            </span>
+                                          </div>
+                                        )}
+                                        {!isTimeExercise && showPrev && (
                                           <div className="flex items-center gap-1 text-[10px] text-slate-500">
                                             <History size={10} /> Anterior: <span className="font-bold">{formatWeightWithUnit(prevWeight.weight, prevWeight.unit)}</span>
                                           </div>
@@ -973,27 +995,31 @@ export default function ClientePage() {
                       ) : (
                         group.exercises.map((ex) => (
                           <div key={ex.id}>
-                            <div className="flex items-center justify-between gap-3 border-b border-white/8 bg-white/4 px-4 py-3 sm:px-5">
-                              <p className="font-bold text-white">Unidad del ejercicio</p>
-                              <div className="flex rounded-full border border-white/10 bg-white/4 p-1">
-                                {(["kg", "lb"] as WeightUnit[]).map((unit) => (
-                                  <button
-                                    key={unit}
-                                    onClick={() => updateExerciseWeightUnit(ex.id, unit)}
-                                    disabled={dayCompleted}
-                                    className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] transition-all ${getExerciseWeightUnit(ex.id) === unit ? "bg-cyan-400/18 text-white shadow-[0_0_18px_rgba(49,231,255,0.16)]" : "text-slate-400 hover:text-slate-200"}`}
-                                  >
-                                    {unit === "kg" ? "KG" : "LB"}
-                                  </button>
-                                ))}
+                            {ex.type !== "time" && (
+                              <div className="flex items-center justify-between gap-3 border-b border-white/8 bg-white/4 px-4 py-3 sm:px-5">
+                                <p className="font-bold text-white">Unidad del ejercicio</p>
+                                <div className="flex rounded-full border border-white/10 bg-white/4 p-1">
+                                  {(["kg", "lb"] as WeightUnit[]).map((unit) => (
+                                    <button
+                                      key={unit}
+                                      onClick={() => updateExerciseWeightUnit(ex.id, unit)}
+                                      disabled={dayCompleted}
+                                      className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] transition-all ${getExerciseWeightUnit(ex.id) === unit ? "bg-cyan-400/18 text-white shadow-[0_0_18px_rgba(49,231,255,0.16)]" : "text-slate-400 hover:text-slate-200"}`}
+                                    >
+                                      {unit === "kg" ? "KG" : "LB"}
+                                    </button>
+                                  ))}
+                                </div>
                               </div>
-                            </div>
-                            <RestTimer exerciseId={ex.id} exerciseName={ex.name || `Ejercicio ${groupIdx + 1}`} triggerTimestamp={timerTriggers[ex.id]} disabled={dayCompleted} />
+                            )}
+                            {ex.type !== "time" && (
+                              <RestTimer exerciseId={ex.id} exerciseName={ex.name || `Ejercicio ${groupIdx + 1}`} triggerTimestamp={timerTriggers[ex.id]} disabled={dayCompleted} />
+                            )}
                             <div className="space-y-3 p-4 sm:p-5">
                               <div className="grid grid-cols-12 gap-2 px-1 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500 sm:text-xs sm:tracking-wider">
                                 <span className="col-span-1">S.</span>
                                 <span className="col-span-4">Reps</span>
-                                <span className="col-span-5">Mi peso</span>
+                                <span className="col-span-5">{ex.type === "time" ? "Tiempo" : "Mi peso"}</span>
                                 <span className="col-span-2 text-center">✓</span>
                               </div>
                               {ex.sets.map((s, sIdx) => {
@@ -1001,18 +1027,25 @@ export default function ClientePage() {
                                 const prevKey = `${ex.id}-${sIdx}`;
                                 const prevWeight = prevWeights[prevKey];
                                 const showPrev = prevWeight?.weight && (!cs?.weight || cs.weight === prevWeight.weight);
+                                const isTimeExercise = ex.type === "time";
                                 return (
                                   <div key={sIdx} className={`grid grid-cols-12 items-start gap-2 rounded-xl p-2 transition-colors ${cs?.done ? "bg-lime-300/10" : "bg-white/3"}`}>
                                     <span className="col-span-1 pt-2 text-sm font-mono text-slate-500">#{sIdx + 1}</span>
                                     <span className="col-span-4 pt-2 text-xs font-medium text-slate-200 sm:text-sm">{s.reps}</span>
                                     <div className="col-span-5 space-y-1">
-                                      <div className="flex items-center gap-2">
-                                        <input type="text" placeholder={prevWeight?.weight ? `Últ: ${formatWeightWithUnit(prevWeight.weight, prevWeight.unit)}` : getExerciseWeightUnit(ex.id)} value={cs?.weight ?? ""} onChange={e => updateWeight(ex.id, sIdx, e.target.value)} disabled={dayCompleted} className="w-full rounded-xl border border-white/10 bg-[#091120] px-3 py-2 text-sm text-white outline-none focus:border-cyan-400/35 focus:ring-2 focus:ring-cyan-400/12 disabled:bg-white/5 disabled:text-slate-500" />
-                                        <span className="rounded-lg border border-white/10 bg-[#091120] px-2.5 py-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-300">
-                                          {normalizeWeightUnit(cs?.weightUnit ?? getExerciseWeightUnit(ex.id))}
-                                        </span>
-                                      </div>
-                                      {showPrev && (
+                                      {isTimeExercise ? (
+                                        <div className="rounded-xl border border-dashed border-white/12 bg-[#091120]/70 px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                                          Minutos
+                                        </div>
+                                      ) : (
+                                        <div className="flex items-center gap-2">
+                                          <input type="text" placeholder={prevWeight?.weight ? `Últ: ${formatWeightWithUnit(prevWeight.weight, prevWeight.unit)}` : getExerciseWeightUnit(ex.id)} value={cs?.weight ?? ""} onChange={e => updateWeight(ex.id, sIdx, e.target.value)} disabled={dayCompleted} className="w-full rounded-xl border border-white/10 bg-[#091120] px-3 py-2 text-sm text-white outline-none focus:border-cyan-400/35 focus:ring-2 focus:ring-cyan-400/12 disabled:bg-white/5 disabled:text-slate-500" />
+                                          <span className="rounded-lg border border-white/10 bg-[#091120] px-2.5 py-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-300">
+                                            {normalizeWeightUnit(cs?.weightUnit ?? getExerciseWeightUnit(ex.id))}
+                                          </span>
+                                        </div>
+                                      )}
+                                      {!isTimeExercise && showPrev && (
                                         <div className="flex items-center gap-1 text-[10px] text-slate-500">
                                           <History size={10} /> Anterior: <span className="font-bold">{formatWeightWithUnit(prevWeight.weight, prevWeight.unit)}</span>
                                         </div>
