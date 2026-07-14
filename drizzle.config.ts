@@ -3,8 +3,12 @@ import * as dotenv from "dotenv";
 
 dotenv.config({ path: ".env.local" });
 
+const env = (globalThis as typeof globalThis & {
+  process?: { env?: Record<string, string | undefined> };
+}).process?.env ?? {};
+
 // Para migraciones usamos el transaction pooler sin pgbouncer
-const migrationsUrl = (process.env.DIRECT_URL ?? process.env.DATABASE_URL ?? "")
+const migrationsUrl = (env.DIRECT_URL ?? env.DATABASE_URL ?? "")
   .replace("?pgbouncer=true", "")
   .replace("&pgbouncer=true", "");
 

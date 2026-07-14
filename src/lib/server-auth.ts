@@ -3,14 +3,21 @@
 const TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 
 function getSecret(): string {
-  const secret = process.env.COACH_TOKEN_SECRET ?? "";
-  if (!secret) {
-    if (process.env.NODE_ENV === "production") {
-      throw new Error("COACH_TOKEN_SECRET is required in production");
-    }
-    return "dev-insecure-secret-change-me";
+  const secret = process.env.COACH_TOKEN_SECRET?.trim();
+  if (secret) return secret;
+
+  const fallbackPassword = process.env.COACH_PASSWORD?.trim();
+  const fallbackUser = process.env.COACH_USERNAME?.trim() || "coach";
+
+  if (fallbackPassword) {
+    return `coach-auth:${fallbackUser}:${fallbackPassword}`;
   }
-  return secret;
+
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("COACH_TOKEN_SECRET or COACH_PASSWORD is required in production");
+  }
+
+  return "dev-insecure-secret-change-me";
 }
 
 async function getHmacKey(): Promise<CryptoKey> {

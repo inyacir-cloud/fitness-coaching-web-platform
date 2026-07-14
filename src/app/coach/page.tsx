@@ -86,15 +86,44 @@ export default function CoachPage() {
   const [showAddInBody, setShowAddInBody] = useState(false);
   const [payingClient, setPayingClient] = useState<PaymentStatusRow | null>(null);
 
+  const resetCoachSession = useCallback(() => {
+    localStorage.removeItem("emicoach-coach-session");
+    setCoachAuth("login");
+    setCoachUser("");
+    setCoachPass("");
+    setClients([]);
+    setPaymentStatuses([]);
+    setSelectedClient(null);
+    setCoachError("Tu sesión expiró. Inicia sesión de nuevo.");
+  }, []);
+
   const loadClients = useCallback(async () => {
     const res = await fetch("/api/clients");
-    setClients(await res.json());
-  }, []);
+    if (res.status === 401) {
+      resetCoachSession();
+      return;
+    }
+    if (!res.ok) {
+      setClients([]);
+      return;
+    }
+    const data: unknown = await res.json();
+    setClients(Array.isArray(data) ? data : []);
+  }, [resetCoachSession]);
 
   const loadPaymentStatuses = useCallback(async () => {
     const res = await fetch("/api/payments/status");
-    setPaymentStatuses(await res.json());
-  }, []);
+    if (res.status === 401) {
+      resetCoachSession();
+      return;
+    }
+    if (!res.ok) {
+      setPaymentStatuses([]);
+      return;
+    }
+    const data: unknown = await res.json();
+    setPaymentStatuses(Array.isArray(data) ? data : []);
+  }, [resetCoachSession]);
 
   useEffect(() => {
     const saved = localStorage.getItem("emicoach-coach-session");
@@ -137,11 +166,8 @@ export default function CoachPage() {
   };
 
   const coachLogout = async () => {
-    localStorage.removeItem("emicoach-coach-session");
     await fetch("/api/auth/coach-logout", { method: "POST" });
-    setCoachAuth("login");
-    setCoachUser("");
-    setCoachPass("");
+    resetCoachSession();
   };
 
   const openClient = useCallback(async (client: Client) => {
@@ -1148,25 +1174,27 @@ function InBodyCard({ record, onDelete }: { record: InBodyRow; onDelete: () => v
 
   return (
     <div className="border border-slate-200 rounded-xl overflow-hidden">
-      <button onClick={() => setOpen(o => !o)} className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-slate-900 text-white rounded-lg flex items-center justify-center text-xs font-bold">
-            {new Date(record.recordDate + "T00:00").toLocaleDateString("es-MX", { month: "short" }).toUpperCase().slice(0, 3)}
+      <div className="flex items-center gap-2 p-4 hover:bg-slate-50 transition-colors">
+        <button onClick={() => setOpen(o => !o)} className="flex min-w-0 flex-1 items-center justify-between text-left">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 bg-slate-900 text-white rounded-lg flex items-center justify-center text-xs font-bold shrink-0">
+              {new Date(record.recordDate + "T00:00").toLocaleDateString("es-MX", { month: "short" }).toUpperCase().slice(0, 3)}
+            </div>
+            <div className="text-left min-w-0">
+              <p className="text-sm font-bold text-slate-900">{fmtDate(record.recordDate)}</p>
+              <p className="text-xs text-slate-500 truncate">
+                {record.weight && <span>{record.weight} kg</span>}
+                {record.bodyFatPercent && <span> · {record.bodyFatPercent}% grasa</span>}
+                {record.muscleMass && <span> · {record.muscleMass}kg músculo</span>}
+              </p>
+            </div>
           </div>
-          <div className="text-left">
-            <p className="text-sm font-bold text-slate-900">{fmtDate(record.recordDate)}</p>
-            <p className="text-xs text-slate-500">
-              {record.weight && <span>{record.weight} kg</span>}
-              {record.bodyFatPercent && <span> · {record.bodyFatPercent}% grasa</span>}
-              {record.muscleMass && <span> · {record.muscleMass}kg músculo</span>}
-            </p>
-          </div>
-        </div>
+          <ChevronDown size={16} className={`ml-3 shrink-0 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`} />
+        </button>
         <div className="flex items-center gap-2">
-          <button onClick={e => { e.stopPropagation(); onDelete(); }} className="text-slate-300 hover:text-red-500 p-1"><Trash2 size={14} /></button>
-          <ChevronDown size={16} className={`text-slate-400 transition-transform ${open ? "rotate-180" : ""}`} />
+          <button type="button" onClick={onDelete} className="text-slate-300 hover:text-red-500 p-1"><Trash2 size={14} /></button>
         </div>
-      </button>
+      </div>
       {open && (
         <div className="border-t border-slate-100 p-4 bg-slate-50">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
