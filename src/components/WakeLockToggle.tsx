@@ -63,7 +63,7 @@ export default function WakeLockToggle({ autoEnable = true }: { autoEnable?: boo
     <button
       onClick={() => (isActive ? releaseLock() : requestLock())}
       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
-        isActive ? "bg-amber-50 border-amber-200 text-amber-700" : "bg-white border-slate-200 text-slate-500 hover:border-slate-900"
+        isActive ? "bg-amber-300/14 border-amber-300/28 text-amber-100" : "bg-[#091120] border-white/10 text-slate-400 hover:border-cyan-400/30 hover:text-white"
       }`}
       title={isActive ? "Pantalla siempre encendida activa" : "Activar pantalla siempre encendida"}
     >

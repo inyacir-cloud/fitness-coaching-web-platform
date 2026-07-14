@@ -43,6 +43,15 @@ export const clientDiets = pgTable("client_diets", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const workoutTemplates = pgTable("workout_templates", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  trainingDays: jsonb("training_days").$type<TemplateTrainingDay[]>().notNull().default([]),
+  meals: jsonb("meals").$type<Meal[]>().notNull().default([]),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Logs de entrenamiento diarios del cliente
 export const clientLogs = pgTable("client_logs", {
   id: serial("id").primaryKey(),
@@ -92,6 +101,8 @@ export type Exercise = {
   name: string;
   notes?: string;
   type?: "reps" | "time";
+  sessionId?: string;
+  sessionSize?: number;
   sets: { reps: string }[];
 };
 
@@ -101,9 +112,18 @@ export type Meal = {
   description: string;
 };
 
+export type TemplateTrainingDay = {
+  dayName: string;
+  displayName?: string;
+  exercises: Exercise[];
+};
+
+export type WeightUnit = "kg" | "lb";
+
 export type CompletedSet = {
   exerciseId: string;
   setIndex: number;
   weight: string;
+  weightUnit?: WeightUnit;
   done: boolean;
 };

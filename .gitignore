@@ -16,6 +16,7 @@ drizzle.config.json.bak
 
 # Build
 dist/
+*.tsbuildinfo
 
 # OS
 .DS_Store

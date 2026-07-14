@@ -1,7 +1,20 @@
 import type { Metadata, Viewport } from "next";
+import { Oxanium, Space_Grotesk } from "next/font/google";
 import type { ReactNode } from "react";
 import "./globals.css";
 import PWAInstall from "@/components/PWAInstall";
+
+const displayFont = Oxanium({
+  subsets: ["latin"],
+  variable: "--font-display",
+  weight: ["600", "700", "800"],
+});
+
+const bodyFont = Space_Grotesk({
+  subsets: ["latin"],
+  variable: "--font-body",
+  weight: ["400", "500", "700"],
+});
 
 export const metadata: Metadata = {
   title: "EmiCoach - Entrenamiento Personal",
@@ -24,7 +37,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0f172a",
+  themeColor: "#050816",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -40,7 +53,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
-      <body className="bg-slate-100 text-slate-900 antialiased">
+      <body className={`${displayFont.variable} ${bodyFont.variable} bg-[var(--bg)] text-[var(--text)] antialiased`}>
         {children}
         <PWAInstall />
       </body>

@@ -1,8 +1,10 @@
 import { db } from "@/db";
-import { clients, payments } from "@/db/schema";
+import { clientDiets, clients, payments, trainingDays, workoutTemplates } from "@/db/schema";
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { addDays } from "@/lib/payments";
+import { eq } from "drizzle-orm";
+import { cloneTemplateMeals, cloneTemplateTrainingDays } from "@/lib/template-utils";
 
 export async function GET() {
   const all = await db.select({
@@ -18,7 +20,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const { name, username, password, monthlyFee, periodicityDays, startDate } = await req.json();
+  const { name, username, password, monthlyFee, periodicityDays, startDate, templateId } = await req.json();
 
   if (!name || !username || !password) {
     return NextResponse.json({ error: "Nombre, usuario y contraseña son obligatorios" }, { status: 400 });
@@ -50,6 +52,29 @@ export async function POST(req: Request) {
         periodEnd: addDays(start, periodDays),
         notes: "Pago inicial de registro",
       });
+    }
+
+    if (templateId) {
+      const [template] = await db.select().from(workoutTemplates).where(eq(workoutTemplates.id, Number(templateId)));
+      if (template) {
+        const trainingSnapshot = cloneTemplateTrainingDays(template.trainingDays ?? []);
+        if (trainingSnapshot.length > 0) {
+          await db.insert(trainingDays).values(trainingSnapshot.map((day) => ({
+            clientId: created.id,
+            dayName: day.dayName,
+            displayName: day.displayName,
+            exercises: day.exercises,
+          })));
+        }
+
+        const mealsSnapshot = cloneTemplateMeals(template.meals ?? []);
+        if (mealsSnapshot.length > 0) {
+          await db.insert(clientDiets).values({
+            clientId: created.id,
+            meals: mealsSnapshot,
+          });
+        }
+      }
     }
 
     const { passwordHash: _omit, ...safe } = created;

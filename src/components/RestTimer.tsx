@@ -113,16 +113,16 @@ export default function RestTimer({ exerciseId, exerciseName, triggerTimestamp, 
   const pct = restSeconds > 0 ? ((restSeconds - timeLeft) / restSeconds) * 100 : 0;
 
   return (
-    <div className="border-b border-slate-100 bg-slate-50/70">
+    <div className="border-b border-white/8 bg-white/4">
       {/* Compact header bar */}
       <div className="flex items-center justify-between gap-2 px-5 py-3">
         {/* Left: label + editable rest */}
         <div className="flex items-center gap-2">
-          <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${running ? "bg-slate-900 text-white" : finished ? "bg-green-600 text-white" : "bg-white border border-slate-200 text-slate-500"}`}>
+          <div className={`flex h-7 w-7 items-center justify-center rounded-lg ${running ? "bg-cyan-400/18 text-cyan-100" : finished ? "bg-lime-300 text-slate-950" : "border border-white/10 bg-[#091120] text-slate-400"}`}>
             <Timer size={14} />
           </div>
-          <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">Descanso</span>
-          <span className="text-xs font-mono bg-white border border-slate-200 px-2 py-0.5 rounded-lg text-slate-700 font-semibold">
+          <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Descanso</span>
+          <span className="rounded-lg border border-white/10 bg-[#091120] px-2 py-0.5 text-xs font-mono font-semibold text-slate-200">
             {fmt(restSeconds)}
           </span>
         </div>
@@ -132,12 +132,12 @@ export default function RestTimer({ exerciseId, exerciseName, triggerTimestamp, 
           {/* Progress pill */}
           <div className="relative flex items-center">
             <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-sm font-black tabular-nums transition-all
-              ${finished ? "bg-green-50 border-green-200 text-green-700" : running ? "bg-slate-900 border-slate-900 text-white shadow-sm" : "bg-white border-slate-200 text-slate-400"}
+              ${finished ? "bg-lime-300/14 border-lime-300/30 text-lime-100" : running ? "bg-cyan-400/16 border-cyan-400/28 text-white shadow-[0_0_24px_rgba(49,231,255,0.16)]" : "bg-[#091120] border-white/10 text-slate-500"}
             `}>
               {running || finished || timeLeft !== restSeconds ? (
                 <>
                   <span>{finished ? "¡Listo!" : fmt(timeLeft)}</span>
-                  {running && <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />}
+                  {running && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-200" />}
                 </>
               ) : (
                 <span className="text-slate-400 font-medium text-xs">--:--</span>
@@ -145,8 +145,8 @@ export default function RestTimer({ exerciseId, exerciseName, triggerTimestamp, 
             </div>
             {/* mini progress bar under pill when running */}
             {running && (
-              <div className="absolute -bottom-1.5 left-2 right-2 h-1 bg-white rounded-full overflow-hidden border border-slate-100">
-                <div className="h-full bg-slate-900 transition-all duration-1000" style={{ width: `${pct}%` }} />
+              <div className="absolute -bottom-1.5 left-2 right-2 h-1 overflow-hidden rounded-full border border-white/10 bg-[#091120]">
+                <div className="h-full bg-cyan-300 transition-all duration-1000" style={{ width: `${pct}%` }} />
               </div>
             )}
           </div>
@@ -155,16 +155,16 @@ export default function RestTimer({ exerciseId, exerciseName, triggerTimestamp, 
           {!disabled && (
             <>
               {running ? (
-                <button onClick={pause} className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-700 hover:border-slate-900 transition-colors">
+                <button onClick={pause} className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-[#091120] text-slate-200 transition-colors hover:border-cyan-400/30">
                   <Pause size={14} />
                 </button>
               ) : (
-                <button onClick={timeLeft !== restSeconds && !finished ? resume : start} className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center hover:bg-slate-800 transition-colors">
+                <button onClick={timeLeft !== restSeconds && !finished ? resume : start} className="flex h-8 w-8 items-center justify-center rounded-full bg-cyan-400/16 text-cyan-100 transition-colors hover:bg-cyan-400/24">
                   <Play size={14} className="ml-0.5" />
                 </button>
               )}
               {(running || finished || timeLeft !== restSeconds) && (
-                <button onClick={reset} className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-900 hover:border-slate-300 transition-colors">
+                <button onClick={reset} className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-[#091120] text-slate-400 transition-colors hover:border-white/20 hover:text-white">
                   <RotateCcw size={14} />
                 </button>
               )}
@@ -174,7 +174,7 @@ export default function RestTimer({ exerciseId, exerciseName, triggerTimestamp, 
           {/* Expand toggle */}
           <button
             onClick={() => setExpanded(v => !v)}
-            className={`w-8 h-8 rounded-full border flex items-center justify-center transition-all ${expanded ? "bg-slate-900 border-slate-900 text-white" : "bg-white border-slate-200 text-slate-500 hover:border-slate-900 hover:text-slate-900"}`}
+            className={`flex h-8 w-8 items-center justify-center rounded-full border transition-all ${expanded ? "bg-cyan-400/16 border-cyan-400/28 text-cyan-100" : "bg-[#091120] border-white/10 text-slate-400 hover:border-cyan-400/30 hover:text-white"}`}
             title="Editar tiempo de descanso"
           >
             <Settings2 size={14} className={expanded ? "rotate-90 transition-transform" : ""} />
@@ -185,15 +185,15 @@ export default function RestTimer({ exerciseId, exerciseName, triggerTimestamp, 
       {/* Expanded edit panel */}
       {expanded && (
         <div className="px-5 pb-4 pt-1 space-y-3 animate-in fade-in slide-in-from-top-1 duration-200">
-          <div className="flex items-center justify-center gap-4 bg-white rounded-xl border border-slate-200 p-3">
-            <button onClick={() => changeRest(-15)} className="w-9 h-9 rounded-xl border border-slate-200 bg-slate-50 hover:bg-white hover:border-slate-900 flex items-center justify-center text-slate-700 transition-colors">
+          <div className="flex items-center justify-center gap-4 rounded-xl border border-white/10 bg-[#091120] p-3">
+            <button onClick={() => changeRest(-15)} className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/4 text-slate-200 transition-colors hover:border-cyan-400/30 hover:text-white">
               <Minus size={16} />
             </button>
             <div className="text-center">
-              <div className="text-xl font-black font-mono text-slate-900">{fmt(restSeconds)}</div>
-              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tiempo descanso</div>
+              <div className="text-xl font-black font-mono text-white">{fmt(restSeconds)}</div>
+              <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Tiempo descanso</div>
             </div>
-            <button onClick={() => changeRest(15)} className="w-9 h-9 rounded-xl border border-slate-200 bg-slate-50 hover:bg-white hover:border-slate-900 flex items-center justify-center text-slate-700 transition-colors">
+            <button onClick={() => changeRest(15)} className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/4 text-slate-200 transition-colors hover:border-cyan-400/30 hover:text-white">
               <Plus size={16} />
             </button>
           </div>
@@ -203,15 +203,15 @@ export default function RestTimer({ exerciseId, exerciseName, triggerTimestamp, 
               <button
                 key={p}
                 onClick={() => selectPreset(p)}
-                className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${restSeconds === p ? "bg-slate-900 text-white shadow-sm" : "bg-white border border-slate-200 text-slate-600 hover:border-slate-900"}`}
+                className={`rounded-full px-3 py-1.5 text-xs font-bold transition-all ${restSeconds === p ? "bg-cyan-400/16 text-white shadow-[0_0_18px_rgba(49,231,255,0.16)]" : "border border-white/10 bg-white/4 text-slate-300 hover:border-cyan-400/30"}`}
               >
                 {fmt(p)}
               </button>
             ))}
           </div>
 
-          <p className="text-[11px] text-center text-slate-400">
-            Se activa automático al marcar una serie de <span className="font-semibold text-slate-600">{exerciseName}</span>. Se guarda por ejercicio.
+          <p className="text-center text-[11px] text-slate-500">
+            Se activa automático al marcar una serie de <span className="font-semibold text-slate-300">{exerciseName}</span>. Se guarda por ejercicio.
           </p>
         </div>
       )}

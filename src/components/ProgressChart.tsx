@@ -22,7 +22,7 @@ export default function ProgressChart({ data, label = "Progreso", unit = "", col
 
   if (sorted.length < 2) {
     return (
-      <div className="flex items-center justify-center py-8 text-slate-400 text-sm border border-dashed border-slate-200 rounded-xl">
+      <div className="flex items-center justify-center rounded-xl border border-dashed border-slate-200 py-8 text-sm text-slate-400">
         Necesitas al menos 2 registros para ver la gráfica
       </div>
     );
@@ -52,6 +52,9 @@ export default function ProgressChart({ data, label = "Progreso", unit = "", col
   const changePct = values[0] ? (change / values[0]) * 100 : 0;
 
   const gridLines = 4;
+  const axisLine = "#dbe4f0";
+  const axisText = "#73839f";
+  const chipClass = change >= 0 ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700";
   const yTicks = Array.from({ length: gridLines + 1 }, (_, i) => {
     const v = yMin + (i / gridLines) * (yMax - yMin);
     return { y: yFor(v), value: v };
@@ -61,10 +64,10 @@ export default function ProgressChart({ data, label = "Progreso", unit = "", col
     <div className="w-full">
       <div className="flex items-center justify-between mb-2">
         <div>
-          <p className="text-xs font-bold text-slate-700 uppercase tracking-wider">{label}</p>
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-600">{label}</p>
           <p className="text-xs text-slate-500">{sorted.length} registros · {sorted[0].date} → {sorted[sorted.length - 1].date}</p>
         </div>
-        <div className={`px-2.5 py-1 rounded-full text-xs font-bold ${change >= 0 ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
+        <div className={`rounded-full px-2.5 py-1 text-xs font-bold ${chipClass}`}>
           {change > 0 ? "+" : ""}{change.toFixed(1)}{unit} ({changePct > 0 ? "+" : ""}{changePct.toFixed(1)}%)
         </div>
       </div>
@@ -74,8 +77,8 @@ export default function ProgressChart({ data, label = "Progreso", unit = "", col
           {/* Grid */}
           {yTicks.map((t, i) => (
             <g key={i}>
-              <line x1={paddingLeft} y1={t.y} x2={width - paddingRight} y2={t.y} stroke="#e2e8f0" strokeWidth={i === 0 || i === gridLines ? 1 : 0.5} strokeDasharray={i % 2 === 0 ? "0" : "2 3"} />
-              <text x={paddingLeft - 6} y={t.y + 3} textAnchor="end" fontSize="9" fill="#94a3b8" fontWeight="600">
+              <line x1={paddingLeft} y1={t.y} x2={width - paddingRight} y2={t.y} stroke={axisLine} strokeWidth={i === 0 || i === gridLines ? 1 : 0.5} strokeDasharray={i % 2 === 0 ? "0" : "2 3"} />
+              <text x={paddingLeft - 6} y={t.y + 3} textAnchor="end" fontSize="9" fill={axisText} fontWeight="600">
                 {t.value.toFixed(t.value >= 100 ? 0 : 1)}
               </text>
             </g>
@@ -130,7 +133,7 @@ export default function ProgressChart({ data, label = "Progreso", unit = "", col
 
         {hoverIdx !== null && (
           <div
-            className="absolute bg-slate-900 text-white text-xs rounded-lg px-2.5 py-1.5 shadow-lg pointer-events-none z-10 -translate-x-1/2"
+            className="pointer-events-none absolute z-10 -translate-x-1/2 rounded-lg bg-slate-900 px-2.5 py-1.5 text-xs text-white shadow-lg"
             style={{ left: `${(hoverIdx / (sorted.length - 1)) * 100}%`, top: "4px" }}
           >
             <div className="font-bold">{sorted[hoverIdx].value}{unit}</div>

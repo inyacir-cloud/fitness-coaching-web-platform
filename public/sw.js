@@ -1,5 +1,5 @@
 // EmiCoach Service Worker - Offline support
-const CACHE_NAME = 'emicoach-v2';
+const CACHE_NAME = 'emicoach-v3';
 const urlsToCache = [
   '/',
   '/manifest.json',
@@ -28,19 +28,14 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Network-first for API, Cache-first for assets
+  // Network-only for API to guarantee fresh coach/client synchronization
   if (event.request.url.includes('/api/')) {
     event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          // Cache successful API calls briefly
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-          }
-          return response;
-        })
-        .catch(() => caches.match(event.request))
+      fetch(event.request, { cache: 'no-store' })
+        .catch(() => new Response(JSON.stringify({ error: 'offline' }), {
+          status: 503,
+          headers: { 'Content-Type': 'application/json' },
+        }))
     );
     return;
   }
