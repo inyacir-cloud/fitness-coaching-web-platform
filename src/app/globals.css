@@ -20,6 +20,7 @@
 }
 
 html {
+	background-color: #050816;
 	background:
 		radial-gradient(circle at top, rgba(49, 231, 255, 0.16), transparent 32%),
 		radial-gradient(circle at 80% 20%, rgba(255, 79, 216, 0.12), transparent 24%),
@@ -28,6 +29,7 @@ html {
 
 body {
 	min-height: 100vh;
+	background-color: #050816;
 	background:
 		radial-gradient(circle at top, rgba(49, 231, 255, 0.12), transparent 32%),
 		radial-gradient(circle at bottom right, rgba(123, 255, 122, 0.1), transparent 28%),
@@ -97,6 +99,30 @@ select {
 	background: linear-gradient(180deg, rgba(10, 16, 32, 0.78), rgba(8, 12, 24, 0.6));
 	border: 1px solid rgba(255, 255, 255, 0.08);
 	backdrop-filter: blur(16px);
+}
+
+@media (max-width: 768px) {
+	html,
+	body {
+		background-attachment: scroll;
+	}
+
+	.neon-shell::before,
+	.neon-shell::after {
+		display: none;
+	}
+
+	.neon-panel,
+	.neon-panel-soft {
+		backdrop-filter: none;
+		box-shadow: none;
+	}
+
+	.neon-outline,
+	.neon-link-card,
+	.neon-button {
+		box-shadow: none;
+	}
 }
 
 .neon-outline {
